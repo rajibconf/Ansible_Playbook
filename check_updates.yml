@@ -1,4 +1,3 @@
----
 - name: Check system updates and display details
   hosts: all
   tasks:
@@ -8,11 +7,13 @@
     - name: Update package cache
       ansible.builtin.apt:
         update_cache: yes
+      become: true  # Ensures root privileges
 
     - name: Check for available updates
       ansible.builtin.command:
         cmd: "apt list --upgradable"
       register: updates
+      become: true  # Ensures root privileges
 
     - name: Display available updates
       ansible.builtin.debug:
