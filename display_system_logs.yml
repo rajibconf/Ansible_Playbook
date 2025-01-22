@@ -1,0 +1,22 @@
+- name: Display system logs and uptime
+  hosts: all
+  tasks:
+    - name: Gather system logs from /var/log/syslog
+      ansible.builtin.command:
+        cmd: "tail -n 50 /var/log/syslog"
+      register: syslog
+      become: true  # Ensure we have permission to read system logs
+
+    - name: Display last 50 lines of syslog
+      ansible.builtin.debug:
+        var: syslog.stdout_lines
+
+    - name: Gather system uptime
+      ansible.builtin.command:
+        cmd: "uptime"
+      register: uptime
+      become: true  # Ensures root privileges
+
+    - name: Display system uptime
+      ansible.builtin.debug:
+        var: uptime.stdout_lines
