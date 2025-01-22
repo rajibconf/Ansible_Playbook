@@ -11,7 +11,21 @@
       shell: apt list --upgradable
       register: updates
 
-    - name: Display system update results
+    - name: Parse updates into a structured list
+      set_fact:
+        update_list: >
+          {{
+            updates.stdout_lines
+            | select("search", "^[^Listing]")
+            | map("regex_search", "^(\\S+)/(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+\\[(.+)]")
+            | map("list")
+            | map("flatten")
+            | map("zip", ["Package", "Repository", "Version", "Architecture", "Current Version"])
+            | map("dict")
+            | list
+          }}
+
+    - name: Display parsed update details
       debug:
         msg: |
           ===========================================
@@ -19,5 +33,11 @@
           ===========================================
           The following updates are available:
           -------------------------------------
-
-          {{ updates.stdout }}
+          {% for update in update_list %}
+          Package: {{ update.Package }}
+          Repository: {{ update.Repository }}
+          New Version: {{ update.Version }}
+          Current Version: {{ update['Current Version'] }}
+          Architecture: {{ update.Architecture }}
+          -------------------------------------
+          {% endfor %}
