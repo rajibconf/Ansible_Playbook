@@ -8,17 +8,23 @@
         update_cache: yes
 
     - name: Check for available updates
-      shell: apt list --upgradable
+      shell: apt list --upgradable 2>/dev/null | tail -n +2
       register: updates
 
     - name: Format the update results
       set_fact:
-        update_list: |
+        update_list: >
+          {% set updates = [] %}
           {% for line in updates.stdout_lines %}
-          {% if not line.startswith('Listing...') %}
-          - {{ line }}
-          {% endif %}
+          {% set details = line.split(' ') %}
+          {% set package_name = details[0] %}
+          {% set repo_version = details[1] %}
+          {% set repo_name = details[2] %}
+          {% set arch = details[3] %}
+          {% set current_version = details[5] if details|length > 5 else "N/A" %}
+          {{ updates.append({'Package': package_name, 'Version': repo_version, 'Repository': repo_name, 'Architecture': arch, 'Current Version': current_version}) }}
           {% endfor %}
+          {{ updates }}
 
     - name: Display system update results in a readable format
       debug:
@@ -28,4 +34,10 @@
           ===========================================
           The following updates are available:
           -------------------------------------
-          {{ update_list.splitlines() | join('\n  ') }}
+          {% for update in update_list %}
+          - Package: {{ update.Package }}
+            Repository: {{ update.Repository }}
+            Version: {{ update.Version }}
+            Architecture: {{ update.Architecture }}
+            Current Version: {{ update['Current Version'] }}
+          {% endfor %}
