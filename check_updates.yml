@@ -11,31 +11,7 @@
       shell: apt list --upgradable
       register: updates
 
-    - name: Format the update results
-      set_fact:
-        update_list: |
-          {% for line in updates.stdout_lines %}
-          {% if not line.startswith('Listing...') %}
-          {{ line }}
-          {% endif %}
-          {% endfor %}
-
-    - name: Write the formatted update results to a file
-      copy:
-        dest: /tmp/system_update_report.txt
-        content: |
-          ===========================================
-          System Update Check - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
-          ===========================================
-          The following updates are available:
-          -------------------------------------
-
-          {% for line in update_list.splitlines() %}
-          {{ line }}
-
-          {% endfor %}
-
-    - name: Display system update results in the console
+    - name: Display system update results
       debug:
         msg: |
           ===========================================
@@ -44,7 +20,4 @@
           The following updates are available:
           -------------------------------------
 
-          {% for line in update_list.splitlines() %}
-          {{ line }}
-
-          {% endfor %}
+          {{ updates.stdout }}
