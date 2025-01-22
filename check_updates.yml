@@ -3,41 +3,51 @@
   hosts: all
   become: yes
   tasks:
+    - name: Gather system facts
+      ansible.builtin.gather_facts:
+        gather_subset: all
+
     - name: Update the package cache
-      apt:
+      ansible.builtin.apt:
         update_cache: yes
+      register: cache_update_result
+      changed_when: cache_update_result.changed
 
     - name: Check for available updates
-      shell: apt list --upgradable
+      ansible.builtin.shell: apt list --upgradable
       register: updates
+      ignore_errors: yes
+
+    - name: Debug the updates variable
+      debug:
+        var: updates
+
+    - name: Ensure stdout_lines is not None
+      debug:
+        msg: "The command returned no output or failed."
+      when: updates.stdout_lines is not defined or updates.stdout_lines | length == 0
 
     - name: Parse updates into a structured list
-      set_fact:
-        update_list: >
+      ansible.builtin.set_fact:
+        parsed_updates: >-
           {{
-            updates.stdout_lines
-            | select("search", "^[^Listing]")
-            | map("regex_search", "^(\\S+)/(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+\\[(.+)]")
-            | map("list")
-            | map("flatten")
-            | map("zip", ["Package", "Repository", "Version", "Architecture", "Current Version"])
-            | map("dict")
+            updates.stdout_lines | default([]) 
+            | select("search", "^[^Listing]") 
+            | map("regex_search", "^(\\S+)/(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+\\[(.+)]") 
+            | map("list") 
+            | map("flatten") 
+            | map("zip", ["Package", "Repository", "Version", "Architecture", "Current Version"]) 
+            | map("dict") 
             | list
           }}
+      when: updates.stdout_lines is defined and updates.stdout_lines | length > 0
 
-    - name: Display parsed update details
+    - name: Debug the parsed updates
       debug:
-        msg: |
-          ===========================================
-          System Update Check - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
-          ===========================================
-          The following updates are available:
-          -------------------------------------
-          {% for update in update_list %}
-          Package: {{ update.Package }}
-          Repository: {{ update.Repository }}
-          New Version: {{ update.Version }}
-          Current Version: {{ update['Current Version'] }}
-          Architecture: {{ update.Architecture }}
-          -------------------------------------
-          {% endfor %}
+        var: parsed_updates
+      when: parsed_updates is defined and parsed_updates | length > 0
+
+    - name: Display message if no updates are available
+      debug:
+        msg: "No updates available."
+      when: parsed_updates is not defined or parsed_updates | length == 0
