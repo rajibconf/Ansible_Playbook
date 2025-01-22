@@ -16,7 +16,7 @@
         update_list: |
           {% for line in updates.stdout_lines %}
           {% if not line.startswith('Listing...') %}
-          {{ line }}
+          - {{ line }}
           {% endif %}
           {% endfor %}
 
@@ -28,4 +28,4 @@
           ===========================================
           The following updates are available:
           -------------------------------------
-          {{ update_list }}
+          {{ update_list.splitlines() | join('\n  ') }}
