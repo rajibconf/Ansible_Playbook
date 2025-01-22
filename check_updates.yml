@@ -1,0 +1,34 @@
+---
+- name: Check system updates and log details
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Update the package cache
+      ansible.builtin.shell: sudo apt update
+      register: update_result
+      changed_when: false
+
+    - name: Check for available updates
+      ansible.builtin.shell: sudo apt list --upgradable
+      register: updates
+      changed_when: false
+
+    - name: Write available updates to a log file
+      ansible.builtin.copy:
+        content: |
+          System Update Check - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+          =====================================================
+          {{ updates.stdout }}
+        dest: /var/log/ansible_updates.log
+      when: updates.stdout != ""
+
+    - name: Notify when no updates are available
+      ansible.builtin.debug:
+        msg: "No updates available on the system."
+      when: updates.stdout == ""
+
+    - name: Display the log location
+      ansible.builtin.debug:
+        msg: "Logs written to /var/log/ansible_updates.log"
+      when: updates.stdout != ""
