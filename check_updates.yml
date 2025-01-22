@@ -1,5 +1,5 @@
 ---
-- name: Check system updates and log details
+- name: Check system updates and display details
   hosts: all
   become: yes
 
@@ -14,21 +14,16 @@
       register: updates
       changed_when: false
 
-    - name: Write available updates to a log file
-      ansible.builtin.copy:
-        content: |
+    - name: Display system update results in a readable format
+      ansible.builtin.debug:
+        msg: |
+          ===========================================
           System Update Check - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
-          =====================================================
-          {{ updates.stdout }}
-        dest: /var/log/ansible_updates.log
-      when: updates.stdout != ""
-
-    - name: Notify when no updates are available
-      ansible.builtin.debug:
-        msg: "No updates available on the system."
-      when: updates.stdout == ""
-
-    - name: Display the log location
-      ansible.builtin.debug:
-        msg: "Logs written to /var/log/ansible_updates.log"
-      when: updates.stdout != ""
+          ===========================================
+          {% if updates.stdout != "" %}
+          The following updates are available:
+          -------------------------------------
+          {{ updates.stdout_lines | join("\n") }}
+          {% else %}
+          No updates available on the system.
+          {% endif %}
