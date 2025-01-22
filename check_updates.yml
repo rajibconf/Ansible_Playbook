@@ -11,18 +11,22 @@
       shell: apt list --upgradable 2>/dev/null | tail -n +2
       register: updates
 
+    - name: Debug updates output
+      debug:
+        var: updates
+
     - name: Format the update results
       set_fact:
         update_list: >
           {% set updates = [] %}
-          {% for line in updates.stdout_lines %}
-          {% set details = line.split(' ') %}
-          {% set package_name = details[0] %}
-          {% set repo_version = details[1] %}
-          {% set repo_name = details[2] %}
-          {% set arch = details[3] %}
-          {% set current_version = details[5] if details|length > 5 else "N/A" %}
-          {{ updates.append({'Package': package_name, 'Version': repo_version, 'Repository': repo_name, 'Architecture': arch, 'Current Version': current_version}) }}
+          {% for line in updates.stdout.splitlines() %}
+            {% set details = line.split(' ') %}
+            {% set package_name = details[0] %}
+            {% set repo_version = details[1] %}
+            {% set repo_name = details[2] %}
+            {% set arch = details[3] %}
+            {% set current_version = details[5] if details|length > 5 else "N/A" %}
+            {{ updates.append({'Package': package_name, 'Version': repo_version, 'Repository': repo_name, 'Architecture': arch, 'Current Version': current_version}) }}
           {% endfor %}
           {{ updates }}
 
