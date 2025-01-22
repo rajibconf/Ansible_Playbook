@@ -8,23 +8,34 @@
         update_cache: yes
 
     - name: Check for available updates
-      shell: apt list --upgradable 2>/dev/null
+      shell: apt list --upgradable
       register: updates
 
     - name: Format the update results
       set_fact:
         update_list: |
-          {% set results = [] %}
           {% for line in updates.stdout_lines %}
-            {% if not line.startswith('Listing...') %}
-              {% set fields = line.split() %}
-              {% set package_info = fields[0] + " - Version: " + fields[1] + ", Repository: " + fields[2] %}
-              {{ results.append(package_info) }}
-            {% endif %}
+          {% if not line.startswith('Listing...') %}
+          {{ line }}
+          {% endif %}
           {% endfor %}
-          {{ results | join('\n') }}
 
-    - name: Display system update results in a readable format
+    - name: Write the formatted update results to a file
+      copy:
+        dest: /tmp/system_update_report.txt
+        content: |
+          ===========================================
+          System Update Check - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+          ===========================================
+          The following updates are available:
+          -------------------------------------
+
+          {% for line in update_list.splitlines() %}
+          {{ line }}
+
+          {% endfor %}
+
+    - name: Display system update results in the console
       debug:
         msg: |
           ===========================================
@@ -32,4 +43,8 @@
           ===========================================
           The following updates are available:
           -------------------------------------
-          {{ update_list if update_list else "No updates available." }}
+
+          {% for line in update_list.splitlines() %}
+          {{ line }}
+
+          {% endfor %}
