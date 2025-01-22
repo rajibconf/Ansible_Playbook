@@ -2,28 +2,30 @@
 - name: Check system updates and display details
   hosts: all
   become: yes
-
   tasks:
     - name: Update the package cache
-      ansible.builtin.shell: sudo apt update
-      register: update_result
-      changed_when: false
+      apt:
+        update_cache: yes
 
     - name: Check for available updates
-      ansible.builtin.shell: sudo apt list --upgradable
+      shell: apt list --upgradable
       register: updates
-      changed_when: false
+
+    - name: Format the update results
+      set_fact:
+        update_list: |
+          {% for line in updates.stdout_lines %}
+          {% if not line.startswith('Listing...') %}
+          {{ line }}
+          {% endif %}
+          {% endfor %}
 
     - name: Display system update results in a readable format
-      ansible.builtin.debug:
+      debug:
         msg: |
           ===========================================
           System Update Check - {{ ansible_date_time.date }} {{ ansible_date_time.time }}
           ===========================================
-          {% if updates.stdout != "" %}
           The following updates are available:
           -------------------------------------
-          {{ updates.stdout_lines | join("\n") }}
-          {% else %}
-          No updates available on the system.
-          {% endif %}
+          {{ update_list }}
